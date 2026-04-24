@@ -13,26 +13,21 @@ RUN export FAUNADB_RELEASE=true && sbt service/assembly
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /faunadb
-
-# Install bash because the FaunaDB scripts require it
 RUN apk add --no-cache bash
-
-# Create directories
 RUN mkdir -p /faunadb/bin /faunadb/lib /faunadb/data
 
-# Copy the compiled JAR from the builder stage
-COPY --from=builder /app/service/target/scala-2.13/faunadb.jar /faunadb/lib/faunadb.jar
+# 1. COPY THE CONFIG FILE (Add this line)
+COPY faunadb.yml /faunadb/faunadb.yml
 
-# Copy the startup scripts
+# 2. Copy the JAR and scripts (as before)
+COPY --from=builder /app/service/target/scala-2.13/faunadb.jar /faunadb/lib/faunadb.jar
 COPY --from=builder /app/service/src/main/scripts/faunadb /faunadb/bin/
 COPY --from=builder /app/service/src/main/scripts/faunadb-admin /faunadb/bin/
 COPY --from=builder /app/service/src/main/scripts/faunadb-backup-s3-upload /faunadb/bin/
 
-# Make scripts executable
 RUN chmod +x /faunadb/bin/*
-
-# Set Environment and Ports
 ENV PATH="/faunadb/bin:${PATH}"
+
 EXPOSE 8443 8084
 
 ENTRYPOINT ["faunadb"]
