@@ -14,12 +14,25 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /faunadb
 RUN apk add --no-cache bash
-RUN mkdir -p /faunadb/bin /faunadb/lib /faunadb/data
 
-# 1. COPY THE CONFIG FILE (Add this line)
+# Create necessary directories (added /var/log/faunadb)
+RUN mkdir -p /faunadb/bin /faunadb/lib /faunadb/data /var/log/faunadb
+
+# Optional: Redirect logs to stdout so 'docker logs' works
+# RUN ln -sf /dev/stdout /var/log/faunadb/gc.log
+
+# Define JAVA_OPTS (Keeping your previous required opens)
+ENV JAVA_OPTS="-Xmx2g -XX:+UseG1GC -ea \
+    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED \
+    --add-opens=java.base/java.util=ALL-UNNAMED \
+    --add-opens=java.base/java.io=ALL-UNNAMED \
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+
+# Copy your config
 COPY faunadb.yml /faunadb/faunadb.yml
 
-# 2. Copy the JAR and scripts (as before)
+# Copy the JAR and scripts from builder
 COPY --from=builder /app/service/target/scala-2.13/faunadb.jar /faunadb/lib/faunadb.jar
 COPY --from=builder /app/service/src/main/scripts/faunadb /faunadb/bin/
 COPY --from=builder /app/service/src/main/scripts/faunadb-admin /faunadb/bin/
